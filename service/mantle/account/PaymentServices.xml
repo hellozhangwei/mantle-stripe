@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-2.1.xsd">
+    <service verb="apply" noun="OrderPaymentsToInvoice">
+        <in-parameters>
+            <parameter name="orderId" required="true"/>
+            <parameter name="orderPartSeqId" required="true"/>
+            <parameter name="invoiceId" required="true"/>
+        </in-parameters>
+        <out-parameters><parameter name="paymentApplicationIdByPaymentId" type="Map"/></out-parameters>
+        <actions>
+            <set field="paymentApplicationIdByPaymentId" from="[:]"/>
+            <service-call name="mantle.account.InvoiceServices.get#InvoiceTotal" out-map="invTotal"
+                          in-map="[invoiceId:invoiceId]"/>
+
+            <!-- now trying by oldest payment first and using single query because mixed header/part payments not common, was: try payments by part first, then payments for entire order -->
+            <entity-find entity-name="mantle.account.payment.Payment" list="paymentList">
+                <econdition field-name="orderId"/>
+                <econdition field-name="orderPartSeqId" or-null="true"/>
+                <econdition field-name="paymentTypeEnumId" value="PtInvoicePayment"/>
+                <order-by field-name="paymentId"/>
+            </entity-find>
+
+            <set field="remainingAmount" from="invTotal.unpaidTotal"/>
+            <iterate list="paymentList" entry="payment">
+                <if condition="remainingAmount == 0.0"><break/></if>
+                <service-call name="mantle.account.PaymentServices.get#PaymentTotals" out-map="context"
+                              in-map="[paymentId:payment.paymentId]"/>
+                <if condition="unappliedTotal &gt; 0">
+                    <set field="amountToApply" from="unappliedTotal > remainingAmount ? remainingAmount : unappliedTotal"/>
+
+                    <!-- capture Payment if promised or authorized -->
+                    <if condition="payment.statusId in ['PmntPromised', 'PmntAuthorized']">
+                        <!-- TODO: currently captures full payment amount, could capture only amountToApply but leaves Payment
+                            considered fully captured when it is not yet; may consider splitting the Payment to create another
+                            promised payment for order with remaining balance if this becomes an issue -->
+                        <service-call name="mantle.account.PaymentServices.capture#SinglePayment" out-map="captOut"
+                                      in-map="[paymentId:payment.paymentId, amount:payment.amount]"/>
+                    </if>
+
+                    <if condition="payment.statusId in ['PmntDelivered', 'PmntConfirmed']">
+                        <service-call name="mantle.account.PaymentServices.apply#InvoicePayment" out-map="applyOut"
+                                      in-map="[paymentId:payment.paymentId, invoiceId:invoiceId, amount:amountToApply]"/>
+                        <script>paymentApplicationIdByPaymentId.put(payment.paymentId, applyOut.paymentApplicationId)</script>
+                        <set field="remainingAmount" from="remainingAmount - applyOut.amountApplied"/>
+                    </if>
+                </if>
+            </iterate>
+        </actions>
+    </service>
+</services>
