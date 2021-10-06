@@ -19,6 +19,19 @@
                 <econdition field-name="paymentTypeEnumId" value="PtInvoicePayment"/>
                 <order-by field-name="paymentId"/>
             </entity-find>
+            <entity-find entity-name="mantle.order.OrderHeaderAndPart" list="orderHeaderAndPartList">
+                <econdition field-name="orderId"/>
+                <econdition field-name="orderPartSeqId" operator="not-equals" from="orderPartSeqId"/>
+                <econditions combine="or">
+                    <econdition field-name="partStatusId" value="OrderOpen"/>
+                    <econdition field-name="partStatusId" value="OrderPlaced"/>
+                    <econdition field-name="partStatusId" value="OrderApproved"/>
+                </econditions>
+            </entity-find>
+            <if condition="orderHeaderAndPartList">
+                <log level="warn" message="Order (orderId: ${orderId}) still has open, pending or approved parts. Hence skipped capture."/>
+                <return/>
+            </if>
 
             <set field="remainingAmount" from="invTotal.unpaidTotal"/>
             <iterate list="paymentList" entry="payment">
