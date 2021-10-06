@@ -283,7 +283,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 address_zip:postalAddress?.postalCode,
                                 address_country:postalAddress?.countryGeoId]"/>
                 </then><else>
-                    <set field="creditCardInfo" from="[paymentRefNum: payment.paymentRefNum]"/>
+                    <set field="creditCardInfo" from="[paymentRefNum: payment.paymentRefNum, orderId: payment.orderId]"/>
                 </else>
             </if>
             <entity-find-one entity-name="moqui.basic.Uom" value-field="currencyUom" cache="true">
@@ -342,8 +342,11 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="send" noun="StripeRefundRequest" type="java" location="com.stripe.TransactionServices" method="sendRefundRequest">
         <in-parameters>
             <parameter name="secretKey" required="true"/>
-            <parameter name="chargeId" required="true"/>
             <parameter name="amount"/>
+            <parameter name="chargeId" required="false"/>
+            <parameter name="referenceNum" required="false"/>
+            <parameter name="intentSecret" required="false"/>
+            <parameter name="intentId" required="false"/>
         </in-parameters>
         <out-parameters>
             <parameter name="responseMap" type="Map"/>
