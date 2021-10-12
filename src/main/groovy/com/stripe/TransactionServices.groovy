@@ -8,6 +8,7 @@ import com.stripe.exception.CardException
 import com.stripe.model.PaymentIntent;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.PaymentIntentCaptureParams;
+import com.stripe.param.RefundCreateParams;
 
 import org.moqui.context.ExecutionContext
 
@@ -29,6 +30,7 @@ class TransactionServices {
                         .setConfirm(true)
                         .addPaymentMethodType("card")
                         .setPaymentMethod(creditCardInfo.paymentRefNum)
+                        .putMetadata("orderId", creditCardInfo.orderId)
                         .setCaptureMethod(PaymentIntentCreateParams.CaptureMethod.MANUAL)// TODO Use transactionInfo.capture to define capture
                         .build();
                         // TODO Understand and use .setConfirm(true)
@@ -142,6 +144,9 @@ class TransactionServices {
         def secretKey = ec.context.secretKey
         def chargeId = ec.context.chargeId
         def amount = ec.context.amount
+        def referenceNum = ec.context.referenceNum;
+        def intentSecret = ec.context.intentSecret;
+        def intentId = ec.context.intentId;
 
         amount = amount.toInteger() * 100 // dollars to cents needed because stripe records USD amounts by the smallest division (cents)
 
@@ -149,18 +154,37 @@ class TransactionServices {
 
         def responseMap = [:]
 
-        try {
-            def refund
-            if (amount != null) refund = Refund.create(['charge':chargeId,'amount':amount])
-            else refund = Refund.create(['charge':chargeId])
+        if(referenceNum) {
+            try {
+                Refund refund = Refund.create(RefundCreateParams.builder()
+                        .setAmount(amount)
+                        .setPaymentIntent(intentId)
+                        .build());
 
-            responseMap.refund = refund
-            responseMap.errorInfo = ['responseCode':'1'] // '1' = success
+                responseMap.amount = amount;
 
-        } catch (StripeException e) {
-            responseMap.errorInfo = ['responseCode':'3','reasonCode':e.getCode(),'reasonMessage':e.getMessage(),'exception':e]
-        } catch (Exception e) {
-            responseMap.errorInfo = ['responseCode':'3','reasonCode':'','reasonMessage':e.getMessage(),'exception':e]
+                responseMap.errorInfo = ['request': 'refund' ,'responseCode':'1', 'status': refund.getStatus(),] // '1' = success
+
+            } catch (StripeException e) {
+                responseMap.errorInfo = ['request': 'refund', 'responseCode':'3','reasonCode':e.getCode(),'reasonMessage':e.getMessage(),'exception':e]
+            } catch (Exception e) {
+                responseMap.errorInfo = ['request': 'refund', 'responseCode':'3','reasonCode':'','reasonMessage':e.getMessage(),'exception':e]
+            }
+
+        } else {
+            try {
+                def charge = Charge.retrieve(chargeId)
+                if (amount != null) charge.capture(['amount':amount])
+                else charge.capture()
+
+                responseMap.charge = charge
+                responseMap.errorInfo = ['responseCode':'1'] // '1' = success
+
+            } catch (StripeException e) {
+                responseMap.errorInfo = ['responseCode':'3','reasonCode':e.getCode(),'reasonMessage':e.getMessage(),'exception':e]
+            } catch (Exception e) {
+                responseMap.errorInfo = ['responseCode':'3','reasonCode':'','reasonMessage':e.getMessage(),'exception':e]
+            }
         }
 
         return ['responseMap':responseMap]
