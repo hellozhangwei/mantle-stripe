@@ -17,7 +17,8 @@ class TransactionServices {
         def secretKey = ec.context.secretKey
         def creditCardInfo = ec.context.creditCardInfo
         def transactionInfo = ec.context.transactionInfo
-        transactionInfo.amount = transactionInfo.amount.toInteger() * 100 // dollars to cents needed because stripe records USD amounts by the smallest division (cents)
+        def amount = transactionInfo.amount as BigDecimal
+        transactionInfo.amount = (amount * 100).longValue() // dollars to cents needed because stripe records USD amounts by the smallest division (cents)
         Stripe.apiKey = secretKey
         def responseMap = [:]
 
@@ -91,12 +92,12 @@ class TransactionServices {
     static Map sendCaptureRequest (ExecutionContext ec) {
         def secretKey = ec.context.secretKey
         def chargeId = ec.context.chargeId
-        def amount = ec.context.amount
+        def amount = ec.context.amount as BigDecimal
         def referenceNum = ec.context.referenceNum;
         def intentSecret = ec.context.intentSecret;
         def intentId = ec.context.intentId;
-
-        amount = amount.toInteger() * 100 // dollars to cents needed because stripe records USD amounts by the smallest division (cents)
+        
+        amount  =  (amount * 100).longValue() // dollars to cents needed because stripe records USD amounts by the smallest division (cents)
 
         Stripe.apiKey = secretKey
 
@@ -143,12 +144,12 @@ class TransactionServices {
     static Map sendRefundRequest (ExecutionContext ec) {
         def secretKey = ec.context.secretKey
         def chargeId = ec.context.chargeId
-        def amount = ec.context.amount
+        def amount = ec.context.amount as BigDecimal
         def referenceNum = ec.context.referenceNum;
         def intentSecret = ec.context.intentSecret;
         def intentId = ec.context.intentId;
 
-        amount = amount.toInteger() * 100 // dollars to cents needed because stripe records USD amounts by the smallest division (cents)
+        amount = (amount * 100).longValue() // dollars to cents needed because stripe records USD amounts by the smallest division (cents)
 
         Stripe.apiKey = secretKey
 
