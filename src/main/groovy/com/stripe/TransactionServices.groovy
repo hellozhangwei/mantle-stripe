@@ -37,9 +37,10 @@ class TransactionServices {
                         // TODO Understand and use .setConfirm(true)
                         // TODO Understand and use .setConfirmationMethod(PaymentIntentCreateParams.ConfirmationMethod.MANUAL)
                         // TODO Use it for separate capturing
-                intent = PaymentIntent.create(createParams);
                 // TODO Find a better way using intent object
+                // Set before any operation to avoid null pointer errors in save response service
                 responseMap.amount = transactionInfo.amount;
+                intent = PaymentIntent.create(createParams);
                 // TODO Handle case if authorisation require multi step authentication (like 3D Secure authentication)
                 // intent = PaymentIntent.retrieve(confirmRequest.getPaymentIntentId());
                 // intent = intent.confirm();
@@ -105,6 +106,9 @@ class TransactionServices {
 
         if(referenceNum) {
             try {
+                // TODO Find a better way using intent object
+                // Set before any operation to avoid null pointer errors in save response service
+                responseMap.amount = amount;
                 PaymentIntent intent = PaymentIntent.retrieve(intentId);
 
                 PaymentIntentCaptureParams params =
@@ -113,7 +117,6 @@ class TransactionServices {
                                 .build();
 
                 intent = intent.capture(params);
-                responseMap.amount = amount;
 
                 responseMap.errorInfo = ['request': 'capture' ,'responseCode':'1', 'status': intent.getStatus(),] // '1' = success
 
