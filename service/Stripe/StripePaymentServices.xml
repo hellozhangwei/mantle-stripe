@@ -25,7 +25,6 @@ along with this software (see the LICENSE.md file). If not, see
 
             <set field="transactionInfo.capture" from="false"/>
             <service-call name="Stripe.StripePaymentServices.send#StripeAuthorizeRequest" in-map="context" out-map="context"/>
-
             <set field="paymentOperationEnumId" value="PgoAuthorize"/>
             <if condition="!responseMap"><then>
                 <entity-find-one entity-name="mantle.account.payment.Payment" value-field="payment"/>
@@ -35,7 +34,7 @@ along with this software (see the LICENSE.md file). If not, see
                           paymentOperationEnumId:paymentOperationEnumId,
                           paymentId:paymentId,
                           paymentMethodId:payment.paymentMethodId,
-                          amount:payment.amount,
+                          amount: payment.amount,
                           amountUomId:payment.amountUomId,
                           transactionDate:ec.user.nowTimestamp,
                           resultSuccess:'N',
@@ -376,12 +375,10 @@ along with this software (see the LICENSE.md file). If not, see
                     <entity-update value-field="payment"/>
 <!--                    <log level="info" message="Charge: ${responseMap.charge}"/>-->
                 </then>
-                <else>
-                    <if condition="responseMap.refund">
-                        <set field="chargeId" from="responseMap.refund.charge"/>
-                        <set field="amount" from="responseMap.refund.amount / 100"/> <!-- TODO but what if payment doesn't have an amount? (same issue for the stripeProcesses) -->
-                    </if>
-                </else>
+                <else-if condition="responseMap.refund">
+                    <set field="chargeId" from="responseMap.refund.charge"/>
+                    <set field="amount" from="responseMap.refund.amount / 100"/> <!-- TODO but what if payment doesn't have an amount? (same issue for the stripeProcesses) -->
+                </else-if>
             </if>
             <if condition="payment.paymentRefNum">
                 <then>
@@ -404,12 +401,6 @@ along with this software (see the LICENSE.md file). If not, see
                     </if>
                     <entity-update value-field="payment"/>
                 </then>
-                <else>
-                    <!-- TODO Handle with Refund case -->
-                    <if condition="responseMap.refund">
-                        <set field="amount" from="responseMap.refund.amount / 100"/> <!-- TODO but what if payment doesn't have an amount? (same issue for the stripeProcesses) -->
-                    </if>
-                </else>
             </if>
 
             <set field="errorInfo" from="responseMap.errorInfo"/>
@@ -425,7 +416,7 @@ along with this software (see the LICENSE.md file). If not, see
                         transactionStatus: errorInfo.status,
                         responseCode:errorInfo.responseCode,
                         reasonCode:errorInfo.reasonCode,
-                        reasonMessage:errorInfo.reasonMessage,
+                        reasonMessage: errorInfo.reasonMessage &amp;&amp; errorInfo.reasonMessage.length() > 255 ? errorInfo.reasonMessage.substring(0, 255) : errorInfo.reasonMessage,
                         transactionDate:ec.user.nowTimestamp,
                         resultSuccess:(errorInfo.responseCode == '1' ? 'Y' : 'N'),
                         resultDeclined:(errorInfo.responseCode == '2' ? 'Y' : 'N'),
