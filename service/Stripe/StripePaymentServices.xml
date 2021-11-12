@@ -392,12 +392,16 @@ along with this software (see the LICENSE.md file). If not, see
                     <if condition="'requires_capture'.equals(responseMap.errorInfo.status)">
                         <set field="payment.statusId" value="PmntAuthorized"/>
                         <else-if condition="'succeeded'.equals(responseMap.errorInfo.status)">
-                            <!-- case for requires_action -->
                             <set field="payment.statusId" value="PmntConfirmed"/>
                         </else-if>
                         <else-if condition="'requires_action'.equals(responseMap.errorInfo.status)">
-                            <set field="payment.statusId" value="PmntPromised"/>
+                            <!-- case for requires_action TODO Handle it in a better way, As currently we do handle it kept status to declined so that capturing is avoided -->
+                            <set field="payment.statusId" value="PmntDeclined"/>
                         </else-if>
+                        <else>
+                            <!-- Failure cases -->
+                            <set field="payment.statusId" value="PmntDeclined" />
+                        </else>
                     </if>
                     <entity-update value-field="payment"/>
                 </then>
