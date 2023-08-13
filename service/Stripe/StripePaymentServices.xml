@@ -11,7 +11,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 
-<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-2.1.xsd">
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="authorize" noun="Payment">
         <implements service="mantle.account.PaymentServices.authorize#Payment"/>
         <actions>
@@ -269,6 +269,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <set field="cardNumber" from="creditCard.cardNumber"/>
 
                 <!-- gathering CC info to be used when generating a token later when sending the request -->
+                <!--for test mode add paymentRefNum:'pm_card_mastercard' to creditCardInfo-->
                 <set field="creditCardInfo" from="[
                                 number:cardNumber,
                                 exp_month:expireMonth,
